@@ -1,0 +1,16 @@
+#!/bin/sh
+for i in `env | grep OS_ | awk -F= '{print $1}'`; do unset $i; done
+export OS_IDENTITY_API_VERSION=3
+export OS_PROJECT_DOMAIN_NAME='Default'
+export OS_PROJECT_NAME='admin'
+export OS_USER_DOMAIN_NAME='Default'
+export OS_USERNAME='admin'
+export OS_PASSWORD='Admin@ES20!9'
+export OS_AUTH_URL='http://keystone.opsl2.svc.cluster.local:80/v3'
+export OS_REGION_NAME='RegionOne'
+export OS_ENDPOINT_TYPE='publicURL'
+export OS_INTERFACE='publicURL'
+
+# When neutron client returns non-ascii character and stdout is piped or
+# redirected, it would raise an encoding error.
+export PYTHONIOENCODING=UTF-8
