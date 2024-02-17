@@ -128,3 +128,16 @@ task_action_schema = {
     'required': ['action'],
     'additionalProperties': False
 }
+
+update_hosts_schema = {
+    'type': 'object',
+    'properties': {
+        'hosts': {
+            'type': 'string',
+            'description': '/etc/hosts的内容',
+            'example': 'xxxx'
+        },
+    },
+    'additionalProperties': False,
+    'required': ['hosts']
+}

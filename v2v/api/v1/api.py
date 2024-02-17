@@ -65,6 +65,22 @@ def check_server_numbers(func):
     return wrapper
 
 
+def check_license_invalid(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            license = json.loads(decrypt(kwargs['license']))
+            uuid = license.get('uuid')
+            if uuid != utils.get_host_uuid():
+                raise Exception('License is illegal')
+        except Exception as ex:
+            LOG.exception(f'decrypt license failed with {str(ex)}')
+            raise Exception('invalid license')
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 class API(object, metaclass=LogMeta):
 
     def __init__(self):
@@ -80,6 +96,7 @@ class API(object, metaclass=LogMeta):
         licenses = db_api.get_all(License)
         return [self._detail_license(l) for l in licenses]
 
+    @check_license_invalid
     def create_license(self, **kwargs):
         kwargs['uuid'] = str(uuid.uuid4())
         db_api.create(License(**kwargs))
@@ -88,11 +105,24 @@ class API(object, metaclass=LogMeta):
         license = db_api.get_by_uuid(License, uuid)
         return self._detail_license(license)
 
+    @check_license_invalid
     def update_license_by_uuid(self, uuid, **kwargs):
         db_api.license_update_by_uuid(uuid, kwargs.get('license'))
 
     def delete_license_by_uuid(self, uuid):
         return db_api.delete_by_uuid(License, uuid)
+
+    def list_hosts(self):
+        cmd = ['cat', '/etc/hosts']
+        hosts = utils.check_cmd_output(cmd)
+        if hosts is not None:
+            hosts = hosts.decode()
+        return hosts
+
+    def update_hosts(self, **kwargs):
+        hosts = kwargs.get('hosts', '')
+        with open('/etc/hosts', 'w') as f:
+            f.write(hosts)
 
     def list_task_by_uuid(self, uuid):
         return db_api.get_by_uuid(Task, uuid)

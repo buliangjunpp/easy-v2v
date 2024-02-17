@@ -10,6 +10,7 @@ from v2v.api.v1.servers import ns_servers
 from v2v.api.v1.tasks import ns_tasks
 from v2v.api.v1.license import ns_license
 from v2v.api.v1.volumes import ns_volumes
+from v2v.api.v1.hosts import ns_hosts
 import v2v.conf
 from v2v import config
 
@@ -29,6 +30,7 @@ def register_blueprints(app):
     api_version_1.add_namespace(ns_tasks, '/tasks')
     api_version_1.add_namespace(ns_license, '/license')
     api_version_1.add_namespace(ns_volumes, '/volumes')
+    api_version_1.add_namespace(ns_hosts, '/hosts')
     app.register_blueprint(bp_api, url_prefix='/v2v')
 
 

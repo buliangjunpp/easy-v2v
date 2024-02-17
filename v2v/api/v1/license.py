@@ -29,7 +29,11 @@ class Licenses(Resource):
         """
         request_data = get_request_info()
         data = request_data.get('json_data')
-        license = v2v_api.create_license(**data)
+        try:
+            license = v2v_api.create_license(**data)
+        except Exception as ex:
+            return resp_message(success=False, code=400, message=str(ex))
+
         return resp_message(license)
 
 
@@ -56,7 +60,11 @@ class License(Resource):
         """
         request_data = get_request_info()
         data = request_data.get('json_data')
-        license = v2v_api.update_license_by_uuid(uuid, **data)
+        try:
+            license = v2v_api.update_license_by_uuid(uuid, **data)
+        except Exception as ex:
+            return resp_message(success=False, code=400, message=str(ex))
+
         return resp_message(license)
 
     def delete(self, uuid):
