@@ -1,7 +1,22 @@
 import json
 import argparse
 from datetime import datetime
-from v2v.common.encryption import encrypt
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import base64
+import hashlib
+
+KEY = 'youknownothingaboutit'
+
+
+def encrypt(plaintext):
+    # 使用 SHA-256 对密钥进行哈希，并取前 32 个字节作为 AES 密钥
+    key_bytes = hashlib.sha256(KEY.encode()).digest()[:32]
+    cipher = AES.new(key_bytes, AES.MODE_CBC)
+    ciphertext_bytes = cipher.encrypt(pad(plaintext.encode(), AES.block_size))
+    iv = base64.b64encode(cipher.iv).decode()
+    ciphertext = base64.b64encode(ciphertext_bytes).decode()
+    return iv + ciphertext
 
 
 if __name__ == '__main__':

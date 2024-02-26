@@ -78,6 +78,11 @@ dest_server = {
             'type': 'string',
             'description': '目标虚拟机磁盘的类型',
             'example': 'hdd'
+        },
+        'v4_fixed_ip': {
+            'type': 'string',
+            'description': '要指定的ipv4地址',
+            'example': '192.168.3.238'
         }
     },
     'required': ['network', 'flavor', 'volume_type']

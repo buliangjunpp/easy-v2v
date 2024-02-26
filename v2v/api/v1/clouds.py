@@ -62,7 +62,11 @@ class OpenStackCloud(Resource):
         :param uuid:
         :return:
         """
-        return resp_message(v2v_api.delete_openstack_by_uuid(uuid))
+        try:
+            resp = v2v_api.delete_openstack_by_uuid(uuid)
+        except Exception as ex:
+            return resp_message(success=False, code=400, message=str(ex))
+        return resp_message(resp)
 
 
 @ns_clouds.route('/vmware', methods=['GET', 'POST'])
@@ -120,4 +124,8 @@ class VMwareCloud(Resource):
         :param uuid:
         :return:
         """
-        return resp_message(v2v_api.delete_vmware_by_uuid(uuid))
+        try:
+            resp = v2v_api.delete_vmware_by_uuid(uuid)
+        except Exception as ex:
+            return resp_message(success=False, code=400, message=str(ex))
+        return resp_message(resp)

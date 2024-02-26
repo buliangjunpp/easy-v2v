@@ -306,6 +306,17 @@ class Neutron(Base):
         networks = self.nc.list_networks()
         return networks
 
+    def subnet_list(self):
+        subnets = self.nc.list_subnets()
+        return subnets
+
+    def show_network_ip_availability(self, net_id):
+        return self.nc.show_network_ip_availability(net_id)
+
+    def port_list(self):
+        ports = self.nc.list_ports()
+        return ports
+
     def get_quota(self, project_id):
         return self.nc.show_quota_details(project_id)
 

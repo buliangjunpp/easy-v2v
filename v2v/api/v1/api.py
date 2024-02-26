@@ -2,6 +2,7 @@ import json
 import uuid
 import types
 import functools
+import netaddr
 from oslo_log import log as logging
 from dateutil import tz
 from datetime import datetime
@@ -46,7 +47,7 @@ def check_server_numbers(func):
 
         if not licenses and len(tasks) >= CONF.allowed_server_number:
             raise Exception('Exceeded maximum quantity limit')
-        license = licenses[-1]
+        license = licenses[0]
         license = json.loads(decrypt(license.license))
         uuid = license.get('uuid')
         if uuid != utils.get_host_uuid():
@@ -137,6 +138,8 @@ class API(object, metaclass=LogMeta):
                 return {}
             for i in ('src_server', 'dest_server'):
                 task[i] = json.loads(task[i])
+            if task['dest_server'].get('name') is None:
+                task['dest_server']['name'] = task['src_server'].get('name')
             task['src_cloud'] = self.list_vmware_by_uuid(task['src_cloud'])
             task['dest_cloud'] = self.list_openstack_by_uuid(task['dest_cloud'])
             return task
@@ -200,6 +203,10 @@ class API(object, metaclass=LogMeta):
         return db_api.get_by_uuid(Openstack, uuid)
 
     def delete_openstack_by_uuid(self, uuid):
+        filters = {'dest_cloud': uuid}
+        tasks = db_api.task_get_all_by_filter(filters)
+        if tasks:
+            raise Exception(f'please delete task={tasks[0].uuid} first')
         return db_api.delete_by_uuid(Openstack, uuid)
 
     def list_vmware(self):
@@ -213,6 +220,10 @@ class API(object, metaclass=LogMeta):
         return db_api.get_by_uuid(VMware, uuid)
 
     def delete_vmware_by_uuid(self, uuid):
+        filters = {'src_cloud': uuid}
+        tasks = db_api.task_get_all_by_filter(filters)
+        if tasks:
+            raise Exception(f'please delete task={tasks[0].uuid} first')
         return db_api.delete_by_uuid(VMware, uuid)
 
     def list_volume_types(self, cloud_uuid):
@@ -227,7 +238,51 @@ class API(object, metaclass=LogMeta):
 
     def list_networks(self, cloud_uuid):
         cloud = db_api.get_by_uuid(Openstack, cloud_uuid)
-        return OpenStack(cloud).neutron.net_list().get('networks', [])
+        op = OpenStack(cloud)
+        networks = op.neutron.net_list().get('networks', [])
+        subnets = op.neutron.subnet_list().get('subnets', [])
+        subnets_dict = {i.get('id'): i for i in subnets}
+        for n in networks:
+            n['subnets'] = [subnets_dict.get(s, {}) for s in n.get('subnets', [])]
+        for network in networks:
+            subnets = network.get('subnets', [])
+            for subnet in subnets:
+                self._get_available_ips(subnet, op)
+        return networks
+
+    def _get_available_ips(self, subnet, openstack):
+        network_id = subnet.get('network_id')
+        allocation_pools = subnet.get('allocation_pools', [])
+        net_ip_availability = openstack.neutron.show_network_ip_availability(network_id)
+        subnet_available_ips = net_ip_availability.get('network_ip_availability', {}).get('subnet_ip_availability')
+        used_ip_addresses = []
+        available_ip_num = 0
+        for item in subnet_available_ips:
+            if item.get('subnet_id') == subnet.get('id'):
+                used_ip_addresses = item.get('used_ip_addresses', [])
+                total_ips = item.get('total_ips')
+                used_ips = item.get('used_ips')
+                available_ip_num = total_ips - used_ips
+                break
+
+        available_ips = []
+        pool_len = 0
+        for pool in allocation_pools:
+            start_ip = pool.get('start')
+            end_ip = pool.get('end')
+            start_ip_index = netaddr.IPNetwork(start_ip, flags=1).value
+            end_ip_index = netaddr.IPNetwork(end_ip, flags=1).value
+            pool_len = pool_len + (end_ip_index - start_ip_index + 1)
+            for ip in netaddr.IPRange(start_ip, end_ip):
+                if str(ip) in used_ip_addresses:
+                    continue
+                available_ips.append(str(ip))
+                if len(available_ips) >= 300:
+                    break
+
+        subnet['available_ips'] = available_ips
+        subnet['pool_len'] = pool_len
+        subnet['available_len'] = available_ip_num
 
     def list_servers(self, cloud_uuid):
 

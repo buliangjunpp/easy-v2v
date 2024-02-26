@@ -547,7 +547,11 @@ class V2VTask(object):
                         '%s=%s' % (self._get_disk_name(i + 1), volumes[i]),
                     ])
 
-                os_command.extend(['--nic', 'net-id=%s' % self.dest_server.get('network')])
+                v4_fixed_ip = self.dest_server.get('v4_fixed_ip')
+                if v4_fixed_ip:
+                    os_command.extend(['--nic', 'net-id=%s,v4-fixed-ip=%s' % (self.dest_server.get('network'), v4_fixed_ip)])
+                else:
+                    os_command.extend(['--nic', 'net-id=%s' % self.dest_server.get('network')])
                 os_command.append(vm_name)
             elif CONF.openstack_type == 'local':
                 # TODO deal with local type
@@ -590,6 +594,10 @@ class V2VTask(object):
         except subprocess.CalledProcessError as e:
             # Note: Do NOT use logging.exception() here as it leaks passwords
             # into the log!
+            self.log(f'Command exited with non-zero return code {e.returncode}, output: \n{e.output}\n')
+            return None
+        except Exception as e:
+            # Note: because of eventlet.monkey_patch() can not get subprocess.CalledProcessError, so workaround
             self.log(f'Command exited with non-zero return code {e.returncode}, output: \n{e.output}\n')
             return None
 

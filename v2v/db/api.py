@@ -110,7 +110,7 @@ def create(obj):
 
 def get_all(model, to_dict=True):
     session = get_session()
-    datas = session.query(model).all()
+    datas = session.query(model).order_by(model.id.desc()).all()
     if to_dict:
         return [data_to_dict(model, d) for d in datas]
     return datas
@@ -122,6 +122,14 @@ def task_get_all_by_filter(filters):
         state = filters.pop('state')
         query = session.query(models.Task)
         return query.filter(models.Task.state.in_(state)).all()
+    if 'dest_cloud' in filters:
+        dest_cloud = filters.pop('dest_cloud')
+        query = session.query(models.Task)
+        return query.filter(models.Task.dest_cloud == dest_cloud).all()
+    if 'src_cloud' in filters:
+        src_cloud = filters.pop('src_cloud')
+        query = session.query(models.Task)
+        return query.filter(models.Task.src_cloud == src_cloud).all()
 
 
 def get_by_uuid(model, uuid, to_dict=True):
